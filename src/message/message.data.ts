@@ -86,9 +86,35 @@ export class MessageData {
     return { messages: result.map(chatMessageToObject), hasMore };
   }
 
+  async findMessagesByTags(tags: string[]): Promise<ChatMessage[]> {
+    const messages = await this.chatMessageModel.find({ tags: { $in: tags } });
+
+    if (!messages || messages.length === 0)
+      throw new Error('No messages with those tags was found');
+
+    // change all chat message doucment in the array to chat message models using the map operator.
+    const convertedMessages = messages.map((message) =>
+      chatMessageToObject(message),
+    );
+    return convertedMessages;
+  }
+
+  async updateTags(messageId: ObjectID, tags: string[]): Promise<ChatMessage> {
+    // find message and update the tags
+    const message = await this.chatMessageModel.findByIdAndUpdate(
+      messageId,
+      {
+        $set: { tags },
+      },
+      { new: true, returnOriginal: false },
+    );
+
+    if (!message) throw new Error('Message was not found');
+    return chatMessageToObject(message);
+  }
+
   async delete(messageId: ObjectID): Promise<ChatMessage> {
     // TODO allow a message to be marked as deleted
-    //
     const message = await this.chatMessageModel.findByIdAndUpdate(
       messageId,
       { deleted: true },
@@ -97,7 +123,7 @@ export class MessageData {
         returnOriginal: false,
       },
     );
-    if(!message) throw new Error("Message to delete was not found")
+    if (!message) throw new Error('Message to delete was not found');
     return chatMessageToObject(message);
   }
 

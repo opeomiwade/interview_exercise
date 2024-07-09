@@ -148,6 +148,9 @@ export class ChatMessage {
 
   @Field({ defaultValue: false, nullable: true })
   isSenderBlocked?: boolean;
+
+  @Field({ defaultValue: [] })
+  tags?: Array<string>;
 }
 
 /***

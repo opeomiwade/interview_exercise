@@ -16,6 +16,10 @@ export class DeleteMessageEvent implements BaseEventType {
   public name = 'delete-message';
   constructor(public message: { id: ObjectId }) {}
 }
+export class UpdateMessageEvent implements BaseEventType {
+  public name = 'update-message';
+  constructor(public message: { id: ObjectId }) {}
+}
 export class LikeMessageEvent implements BaseEventType {
   public name = 'like-message';
   constructor(public message: { userId: ObjectId; messageId: ObjectId }) {}

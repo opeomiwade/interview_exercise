@@ -13,6 +13,7 @@ import {
   ResolveMessageDto,
   ReactionDto,
   PollOptionDto,
+  UpdateMessageDto,
 } from './models/message.dto';
 import { MessageData } from './message.data';
 import { IAuthenticatedUser } from '../authentication/jwt.strategy';
@@ -29,6 +30,7 @@ import {
   UnresolveMessageEvent,
   ReactedMessageEvent,
   UnReactedMessageEvent,
+  UpdateMessageEvent,
 } from '../conversation/conversation-channel.socket';
 import { UserService } from '../user/user.service';
 import { ConversationData } from '../conversation/conversation.data';
@@ -278,7 +280,6 @@ export class MessageLogic implements IMessageLogic {
     return blockedUsers.map((user) => user.blockedUserId);
   }
 
-
   async getChatConversationMessages(
     getMessageDto: GetMessageDto,
     authenticatedUser: IAuthenticatedUser,
@@ -313,7 +314,6 @@ export class MessageLogic implements IMessageLogic {
       paginatedChatMessages,
       blockedUserIds,
     );
-  
 
     return paginatedChatMessages;
   }
@@ -366,6 +366,63 @@ export class MessageLogic implements IMessageLogic {
     );
 
     return message;
+  }
+
+  async updateTags(
+    UpdateMessageDto: UpdateMessageDto,
+    authenticatedUser: IAuthenticatedUser,
+    tags?: string[],
+    tagsToRemove?: string[],
+  ) {
+    // check if authenticated user is allowed to update or add tags to message
+    await this.throwForbiddenErrorIfNotAuthorized(
+      authenticatedUser,
+      UpdateMessageDto.messageId,
+      Action.updateMessage,
+    );
+
+    // Update tags if new tags are provided.
+    let updatedTags = [...UpdateMessageDto.tags];
+    if (tags && tags.length > 0) updatedTags = [...updatedTags, ...tags];
+
+    //remove specified tags if tags to remove are provided.
+    if (tagsToRemove && tagsToRemove.length > 0)
+      updatedTags = updatedTags.filter((tag) => tagsToRemove.includes(tag));
+
+    // call messageData update method to update tags accordingly
+    const message = await this.messageData.updateTags(
+      UpdateMessageDto.messageId,
+      UpdateMessageDto.tags,
+    );
+
+    //send updatemessage event to conversation
+    const updateMessageEvent = new UpdateMessageEvent({
+      id: UpdateMessageDto.messageId,
+    });
+
+    this.conversationChannel.send(
+      updateMessageEvent,
+      UpdateMessageDto.conversationId.toHexString(),
+    );
+
+    return message;
+  }
+
+  async findMessageByTags(
+    messageId: ObjectID,
+    authenticatedUser: IAuthenticatedUser,
+    tags: string[],
+  ) {
+    // check if authenticated user has the permission for this action
+    await this.throwForbiddenErrorIfNotAuthorized(
+      authenticatedUser,
+      messageId,
+      Action.readConversation,
+    );
+
+    const messages = await this.messageData.findMessagesByTags(tags);
+
+    return messages;
   }
 
   async resolve(
