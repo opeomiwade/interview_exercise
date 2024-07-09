@@ -5,7 +5,7 @@ import { MessageData } from './message.data';
 import { ChatMessageModel, ChatMessageSchema } from './models/message.model';
 
 import { ConfigManagerModule } from '../configuration/configuration-manager.module';
-import {getTestConfiguration}  from '../configuration/configuration-manager.utils';
+import { getTestConfiguration } from '../configuration/configuration-manager.utils';
 
 const id = new ObjectID('5fe0cce861c8ea54018385af');
 const conversationId = new ObjectID();
@@ -28,8 +28,7 @@ describe('MessageData', () => {
         MongooseModule.forRootAsync({
           imports: [ConfigManagerModule],
           useFactory: () => {
-            const databaseConfig =
-              getTestConfiguration().database;
+            const databaseConfig = getTestConfiguration().database;
             return {
               uri: databaseConfig.connectionString,
             };
@@ -45,11 +44,9 @@ describe('MessageData', () => {
     messageData = module.get<TestMessageData>(TestMessageData);
   });
 
-  beforeEach(
-    async () => {
-      messageData.deleteMany();
-    }
-  );
+  beforeEach(async () => {
+    messageData.deleteMany();
+  });
 
   afterEach(async () => {
     messageData.deleteMany();
@@ -71,24 +68,20 @@ describe('MessageData', () => {
         senderId,
       );
 
-      expect(message).toMatchObject(
-        {
-          likes: [],
-          resolved: false,
-          deleted: false,
-          reactions: [],
-          text: 'Hello world',
-          senderId: senderId,
-          conversationId: conversationId,
-          conversation: { id: conversationId.toHexString() },
-          likesCount: 0,
-          sender: { id: senderId.toHexString() },
-        }
-      );
-
+      expect(message).toMatchObject({
+        likes: [],
+        resolved: false,
+        deleted: false,
+        reactions: [],
+        text: 'Hello world',
+        senderId: senderId,
+        conversationId: conversationId,
+        conversation: { id: conversationId.toHexString() },
+        likesCount: 0,
+        sender: { id: senderId.toHexString() },
+      });
     });
   });
-
 
   describe('get', () => {
     it('should be defined', () => {
@@ -102,9 +95,11 @@ describe('MessageData', () => {
         senderId,
       );
 
-      const gotMessage = await messageData.getMessage(sentMessage.id.toHexString())
+      const gotMessage = await messageData.getMessage(
+        sentMessage.id.toHexString(),
+      );
 
-      expect(gotMessage).toMatchObject(sentMessage)
+      expect(gotMessage).toMatchObject(sentMessage);
     });
   });
 
@@ -122,6 +117,72 @@ describe('MessageData', () => {
       // And that is it now deleted
       const deletedMessage = await messageData.delete(new ObjectID(message.id));
       expect(deletedMessage.deleted).toEqual(true);
+    });
+  });
+
+  describe('update tags', () => {
+    it('successfully updates tags on a message', async () => {
+      const conversationId = new ObjectID();
+      const message = await messageData.create(
+        {
+          conversationId,
+          text: 'Message to update tags',
+        },
+        senderId,
+      );
+
+      expect(message.tags).toBeTruthy();
+      expect(message.tags?.length).toEqual(0);
+
+      const tags = ['courses'];
+
+      const updatedMessage = await messageData.updateTags(
+        new ObjectID(message.id),
+        tags,
+      );
+
+      // check that the tags of the message was updated
+      expect(updatedMessage.tags).toBeDefined();
+      expect(updatedMessage.tags?.length).toEqual(1);
+      expect(updatedMessage.tags).toContain('courses');
+    });
+  });
+
+  describe('find message with tags', () => {
+    it('successfully finds message with tags', async () => {
+      const conversationId = new ObjectID();
+
+      // create first message with tags
+      const message = await messageData.create(
+        {
+          conversationId,
+          text: 'Message to find with tags tags',
+        },
+        senderId,
+      );
+
+      await messageData.updateTags(new ObjectID(message.id), [
+        'courses',
+        'alumni',
+      ]);
+
+      //create second message with tags.
+      const message2 = await messageData.create(
+        {
+          conversationId,
+          text: 'Message to find with tags tags',
+        },
+        senderId,
+      );
+
+      await messageData.updateTags(new ObjectID(message2.id), [
+        'courses',
+        'graduate',
+      ]);
+
+      const messages = await messageData.findMessagesByTags(['courses']);
+
+      expect(messages.length).toEqual(2);
     });
   });
 });
