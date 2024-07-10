@@ -150,7 +150,7 @@ export class UpdateMessageDto {
   @Field()
   messageId: ObjectID;
 
-  @Field()
+  @Field(() => [String], {defaultValue: []})
   tags: string[];
 }
 

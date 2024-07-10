@@ -109,7 +109,7 @@ export class MessageData {
       { new: true, returnOriginal: false },
     );
 
-    if (!message) throw new Error('Message was not found');
+    if (!message) throw new Error('Message could not be updated');
     return chatMessageToObject(message);
   }
 

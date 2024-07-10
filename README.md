@@ -83,36 +83,45 @@ While we don't expect everyone to complete this part of the exercise, it will fo
 We'd love to hear about
 * How you would go about implementing the solution
   
-  The first thing I did when it came to implementing the functionality for update tags and find message with tags, was look through the codebase. I wanted to ensure I had an             understanding of teh codebase and what the various methods in the DAOs, DTOs and Service layer were responsible for , so I could make informed decisions on what methods
+  The first thing I did when it came to implementing the functionality for update tags and find message with tags, was look through the codebase. I wanted to ensure I had an             understanding of the codebase and what the various methods in the DAOs, DTOs and Service layer were responsible for , so I could make informed decisions on what methods
   would help me implement my solution.
 
-  After reading through the code base, I began implementing the functionality for find tags and update tags methods. I ensurec tags for the message were kept at message
-  level to ensure that they were different from the tags used for conversations. I also made used of the `throwForbiddenErrorIfNotAuthorized()` method to ensure only users with
-  valid permissions can update/add/remove tags on the message. All teh business logic for the updates tags was handled in the `message.logic.ts` file, I ensured to check if the
-  user wanted add new tags or wanted to removed tags via providing an two array params in the method defintion. A `tagsToRemove` and `tags` array parameters, both are optional,
-  therefore if tagsToRemove id provided when the method is called the `message.logic.ts`(service layer) `updateTags()` method handles the logic for removing tags and then passes
-  the updated tags to `message.data.ts`(DAO) to persist the change and same goes for if the `tags` is provided in the method call.
+  I made changes to the `ChatMessage` and `ChatMessageModel` classes in the `message.model.ts` and `message.entity.ts` files respectively.
+  I added an optional tags property to allow tags to be added to the messages.
 
-  The find message with tags was implemented using the mongodb `$in` operator to create a query. `{ tags: { $in: tags } }`, if the tags field in the document contains values that are 
-  match any of the values in provided tags array parameter then add the document to the result. All messages are the transformed using `chatMessagToObject()` and then returned. The 
-  `message.logic.ts` method just check user is authorized for   the action and call the DAO method.
+  After reading through the codebase, I began implementing the functionality for the `findTags` and `updateTags` methods. I ensured tags for the message were kept at the message level 
+  to ensure that they were different from the tags used for conversations. I also made use of the `throwForbiddenErrorIfNotAuthorized()` method to ensure only users with valid 
+  permissions can update/add/remove tags on the message. All the business logic for updating tags was handled in the `message.logic.ts` file. I ensured to check if the user wanted to 
+  add new tags or remove tags by providing two array parameters in the method definition: a `tagsToRemove` and a `tags` array, both of which are optional. Therefore, if `tagsToRemove` 
+  is provided when the method is called, the `message.logic.ts` (service layer) `updateTags()` method handles the logic for removing tags and then passes the updated tags to 
+  `message.data.ts`(DAO) to persist the changes, and the same goes for if the `tags` parameter is provided in the method call.
+ 
+  The findMessagesWithTags method was implemented using the MongoDB $in operator to create a query: `{ tags: { $in: tags } }`. If the tags field in the document contains values that 
+  match any of the values in the provided tags array parameter, then the document is added to the result. All messages are then transformed using chatMessageToObject() and returned. 
+  The corresponding `message.logic.ts` method checks if a user is authorized for the action and calls the DAO method to retrieve the messages.
 
-  After implementing the methods, I proceeded to write unit tests for both and made necessary changes to my implementations when test failed.
-  
+
+  After implementing these methods, I wrote unit tests to validate their functionality. I made necessary adjustments to the implementations 
+  based on the test results to ensure correctness and reliability.
+
 * What problems you might encounter
   
-    The main challenge was my unfamiliarity with jest, I did not understand the syntax initially but I was able to grasp it quickly after looking through multiple tests as I have 
-    experience using another testing framework JUnit in Java, which follows similar principles. It made it easier for me to understand it.
+  The main challenge was my unfamiliarity with `jest`, I did not understand the syntax initially, but I was able to grasp it quickly after looking through multiple tests as I have 
+  experience using another testing framework, `JUnit` in Java, which follows similar principles. It made it easier for me to understand it.
   
 * How you would go about testing
   
-    I wrote unit tests for my newly implememnted find tags and update tags method to ensure they perist as they should. To test the business logic for both methods, I would
-    have written tests for the business logic methods to ensure they work as they should. This is ometjing I am yet to do but plan on doing.
+  I wrote unit tests for my newly implememented find tags and update tags method to ensure they persist changes to tags and the query can correctly retrieve documents with the 
+  specified tags.
+
+  To test the corresponding methods in the `message.logic.ts`, I wrote unit tests unit tests to validate that only authorized users are allowed to perform actions.
+  I tested that the remove tags and add/update tags logic works properly based on method parameters provided. I also tested that both method threw `ForbiddenError`
+  when they were supposed to.
 
 * What you might do differently
   
-  The main thing I would have done differently is taking a test driven development approach rather than iterative development.I would have written the tests first
-  before jumping into the implementation of teh functionality. It would have helped me identify issues wth my solution earlier on and potentially have sped up the
+  The main thing I would have done differently is taking a test driven development approach rather than iterative development approach.I would have written the tests first
+  before jumping into the implementation of the functionality. I feel it would have helped me identify issues with my solutions earlier on and potentially have sped up the
   implementation process.
 
 # Additional

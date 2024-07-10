@@ -387,7 +387,7 @@ export class MessageLogic implements IMessageLogic {
 
     //remove specified tags if tags to remove are provided.
     if (tagsToRemove && tagsToRemove.length > 0)
-      updatedTags = updatedTags.filter((tag) => tagsToRemove.includes(tag));
+      updatedTags = updatedTags.filter((tag) => !tagsToRemove.includes(tag));
 
     // call messageData update method to update tags accordingly
     const message = await this.messageData.updateTags(
@@ -409,16 +409,22 @@ export class MessageLogic implements IMessageLogic {
   }
 
   async findMessageByTags(
-    messageId: ObjectID,
+    getMessageDto: GetMessageDto,
     authenticatedUser: IAuthenticatedUser,
     tags: string[],
   ) {
     // check if authenticated user has the permission for this action
-    await this.throwForbiddenErrorIfNotAuthorized(
-      authenticatedUser,
-      messageId,
-      Action.readConversation,
-    );
+    if (
+      !(await this.permissions.conversationPermissions({
+        user: authenticatedUser,
+        conversationId: String(getMessageDto.conversationId),
+        action: Action.readConversation,
+      }))
+    ) {
+      throw new ForbiddenError(
+        `User is not authorised to read this conversation`,
+      );
+    }
 
     const messages = await this.messageData.findMessagesByTags(tags);
 

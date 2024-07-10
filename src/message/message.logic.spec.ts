@@ -19,6 +19,7 @@ import {
   UnReactedMessageEvent,
   UnlikeMessageEvent,
   UnresolveMessageEvent,
+  UpdateMessageEvent,
 } from '../conversation/conversation-channel.socket';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ObjectID, ObjectId } from 'mongodb';
@@ -255,6 +256,63 @@ describe('MessageLogic', () => {
         deleted: true,
         resolved: false,
       };
+    }
+
+    // add mock implementation of messageData.updateTags
+    updateTags(messageId: ObjectId, tags: string[]) {
+      const updatedMessage = {
+        _id: messageId,
+        id: messageId,
+        text: 'message with updated tags',
+        senderId: new ObjectId('5fe0cce861c8ea54018385af'),
+        conversationId: new ObjectId('5fe0cce861c8ea54018385ae'),
+        created: new Date('2018-05-11T17:47:40.893Z'),
+        deleted: false,
+        resolved: false,
+        tags: tags,
+      };
+
+      return updatedMessage;
+    }
+
+    // add mock implementation of messageData.findMessageByTags
+    findMessagesByTags(tags: string[]) {
+      const mockedMessages = [
+        {
+          _id: new ObjectId(),
+          text: 'Message with tag1 and tag2',
+          senderId: new ObjectId(),
+          conversationId: new ObjectId(),
+          created: new Date('2023-01-01T12:00:00Z'),
+          tags: ['tag1', 'tag2'],
+          deleted: false,
+          resolved: false,
+        },
+        {
+          _id: new ObjectId(),
+          text: 'Message with tag2 and tag3',
+          senderId: new ObjectId(),
+          conversationId: new ObjectId(),
+          created: new Date('2023-01-02T12:00:00Z'),
+          tags: ['tag2', 'tag3'],
+          deleted: false,
+          resolved: false,
+        },
+        {
+          _id: new ObjectId(),
+          text: 'Message with tag1, tag3, and tag4',
+          senderId: new ObjectId(),
+          conversationId: new ObjectId(),
+          created: new Date('2023-01-03T12:00:00Z'),
+          tags: ['tag1', 'tag3', 'tag4'],
+          deleted: false,
+          resolved: false,
+        },
+      ];
+
+      return mockedMessages.filter((message) =>
+        message.tags.some((tag) => tags.includes(tag)),
+      );
     }
 
     resolve(messageId: ObjectId) {
@@ -549,7 +607,6 @@ describe('MessageLogic', () => {
   class MockConversationChannel {
     send = jest.fn();
   }
-
 
   class MockUserBlocksLogic implements IUserBlocksLogic {
     getBlockedUsers(
@@ -1085,6 +1142,141 @@ describe('MessageLogic', () => {
       );
 
       expect(conversationChannel.send).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // tests for updateTags method
+  describe('updateTags', () => {
+    it('should throw an error with unauthorised user', async () => {
+      jest.spyOn(messageData, 'updateTags');
+
+      // create tags and tagsToRemove arrays
+      const tagsToAdd = ['newTag1', 'newTag2'];
+
+      //ensure error is thrown when it is an unauthorised  user
+      await expect(
+        messageLogic.updateTags(
+          { conversationId, messageId, tags: ['existingTag1', 'existingTag2'] },
+          { ...validUser, userId: UNAUTHORISED_USER},
+          tagsToAdd,
+        ),
+      ).rejects.toThrow(ForbiddenError);
+
+      expect(messageData.updateTags).not.toHaveBeenCalled();
+    });
+
+    it('sucessfully adds new message tags if array is defined', async () => {
+      jest.spyOn(messageData, 'updateTags');
+
+      // create tags and tagsToRemove arrays
+      const tagsToAdd = ['newTag1', 'newTag2'];
+
+      // called service layer updateTags methods
+      const updateMessage = await messageLogic.updateTags(
+        { conversationId, messageId, tags: ['existingTag1', 'existingTag2'] },
+        validUser,
+        tagsToAdd,
+      );
+
+      // Assertions
+      expect(updateMessage.tags).toBeDefined();
+      expect(updateMessage.tags).toContain('newTag1')
+      expect(updateMessage.tags).toContain('newTag2')
+      expect(updateMessage.tags).toEqual([
+        'existingTag1',
+        'existingTag2',
+        'newTag1',
+        'newTag2',
+      ]);
+
+
+      const updateMessageEvent = new UpdateMessageEvent({ id: messageId });
+
+      expect(conversationChannel.send).toHaveBeenCalledWith(
+        updateMessageEvent,
+        conversationId.toHexString(),
+      );
+
+      expect(conversationChannel.send).toHaveBeenCalledTimes(1);
+    });
+
+    it('successfully removes tags when tagsToRemove is defined', async () => {
+      // create tags and tagsToRemove arrays
+      const tagsToRemove = ['existingTag1'];
+
+      const updatedMessage = await messageLogic.updateTags(
+        { conversationId, messageId, tags: ['existingTag1', 'existingTag2'] },
+        validUser,
+        undefined,
+        tagsToRemove,
+      );
+
+      //Assertions
+      expect(updatedMessage.tags).toBeDefined();
+      expect(updatedMessage.tags?.length).toEqual(1);
+      expect(updatedMessage.tags).toContain('existingTag2');
+      expect(updatedMessage.tags).not.toContain('existingTag1');
+
+      const updateMessageEvent = new UpdateMessageEvent({ id: messageId });
+
+      expect(conversationChannel.send).toHaveBeenCalledWith(
+        updateMessageEvent,
+        conversationId.toHexString(),
+      );
+
+      expect(conversationChannel.send).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  //tests for find message by tags method
+  describe('findMessagesByTags', () => {
+    it('should throw an error with unauthorised user', async () => {
+      jest.spyOn(messageData, 'findMessagesByTags');
+
+      // mock permissionService.conversationPermissions as it is an external service method.
+      jest
+        .spyOn(permissionsService, 'conversationPermissions')
+        .mockImplementationOnce(() => {
+          return Promise.resolve(false);
+        });
+
+      // create search tags
+      const searchTags = ['tag1', 'tag2'];
+
+      const getMessageDto: GetMessageDto = { conversationId, limit: 2 };
+
+      //ensure error is thrown when it is an unauthorised  user
+      await expect(
+        messageLogic.findMessageByTags(
+          getMessageDto,
+          { ...validUser, userId: UNAUTHORISED_USER },
+          searchTags,
+        ),
+      ).rejects.toThrow(ForbiddenError);
+
+      expect(messageData.findMessagesByTags).not.toHaveBeenCalled();
+    });
+
+    it('sucessfully find message with specified tags', async () => {
+      jest.spyOn(messageData, 'findMessagesByTags');
+
+      // create mock search tags
+      const searchTags = ['tag1', 'tag2', 'tag3'];
+
+      const getMessageDto: GetMessageDto = { conversationId, limit: 2 };
+
+      const messages = await messageLogic.findMessageByTags(
+        getMessageDto,
+        validUser,
+        searchTags,
+      );
+
+      // check if every returned message contains at least one of the search tags
+      messages.forEach((message) =>
+        expect(
+          message.tags?.some((tag) => searchTags.includes(tag)),
+        ).toBeTruthy(),
+      );
     });
   });
 

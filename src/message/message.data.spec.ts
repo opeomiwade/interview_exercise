@@ -137,7 +137,7 @@ describe('MessageData', () => {
       expect(message.tags).toBeTruthy();
       expect(message.tags?.length).toEqual(0);
 
-      const tags = ['courses'];
+      const tags = ['courses', 'computer science'];
 
       const updatedMessage = await messageData.updateTags(
         new ObjectID(message.id),
@@ -146,8 +146,10 @@ describe('MessageData', () => {
 
       // check that the tags of the message was updated
       expect(updatedMessage.tags).toBeDefined();
-      expect(updatedMessage.tags?.length).toEqual(1);
+      expect(updatedMessage.tags?.length).toEqual(2);
       expect(updatedMessage.tags).toContain('courses');
+      expect(updatedMessage.tags).toContain('computer science');
+
     });
   });
 
