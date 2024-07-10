@@ -392,7 +392,7 @@ export class MessageLogic implements IMessageLogic {
     // call messageData update method to update tags accordingly
     const message = await this.messageData.updateTags(
       UpdateMessageDto.messageId,
-      UpdateMessageDto.tags,
+      updatedTags,
     );
 
     //send updatemessage event to conversation
