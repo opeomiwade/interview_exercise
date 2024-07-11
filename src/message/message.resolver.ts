@@ -21,6 +21,7 @@ import {
   LikeMessageDto,
   ResolveMessageDto,
   ReactionDto,
+  UpdateMessageDto,
 } from './models/message.dto';
 import { MessageLogic } from './message.logic';
 import {
@@ -97,6 +98,38 @@ export class MessageResolver {
     @AuthenticatedUser() authenticatedUser: IAuthenticatedUser,
   ): Promise<ChatMessage> {
     return await this.messageLogic.delete(deleteMessageDto, authenticatedUser);
+  }
+
+  @Query(() => [ChatMessage])
+  @UseGuards(GqlAuthGuard)
+  async findMessagesByTags(
+    @Args('getMessageDto') getMessageDto: GetMessageDto,
+    @Args('tags', { type: () => [String] }) tags: Array<string>,
+    @AuthenticatedUser() authenticatedUser: IAuthenticatedUser,
+  ): Promise<ChatMessage[]> {
+    return await this.messageLogic.findMessageByTags(
+      getMessageDto,
+      authenticatedUser,
+      tags,
+    );
+  }
+
+  @Mutation(() => ChatMessage)
+  @UseGuards(GqlAuthGuard)
+  async updateTags(
+    @AuthenticatedUser() authenticatedUser: IAuthenticatedUser,
+    @Args('updateMessageDto') updateMessageDto: UpdateMessageDto,
+    @Args('tags', { type: () => [String], nullable: true })
+    tags?: Array<string>,
+    @Args('tagsToRemove', { type: () => [String], nullable: true })
+    tagsToRemove?: Array<string>,
+  ): Promise<ChatMessage> {
+    return await this.messageLogic.updateTags(
+      updateMessageDto,
+      authenticatedUser,
+      tags,
+      tagsToRemove,
+    );
   }
 
   @Mutation(() => ChatMessage)

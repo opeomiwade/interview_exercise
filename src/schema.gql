@@ -138,6 +138,7 @@ type Query {
   getChatConversation(id: String!): ChatConversation!
   getMessagesForChatConversation(getMessageDto: GetMessageDto!): [ChatMessage!]! @deprecated(reason: "This query has now been deprecated, please use getChatConversationMessages")
   getChatConversationMessages(getMessageDto: GetMessageDto!): PaginatedChatMessages!
+  findMessagesByTags(tags: [String!]!, getMessageDto: GetMessageDto!): [ChatMessage!]!
   conversationInboxDoNotUse: [ConversationInbox!]! @deprecated(reason: "Do not use query. See implementation for more details.")
 }
 
@@ -153,6 +154,7 @@ type Mutation {
   unpinMessageInConversation(unpinMessageDTO: unpinMessageDTO!): ChatConversation!
   sendConversationMessage(messageDto: MessageDto!): ChatMessage!
   deleteConversationMessage(deleteMessageDto: DeleteMessageDto!): ChatMessage!
+  updateTags(tagsToRemove: [String!], tags: [String!], updateMessageDto: UpdateMessageDto!): ChatMessage!
   resolveConversationMessage(resolveMessageDto: ResolveMessageDto!): ChatMessage!
   unresolveConversationMessage(resolveMessageDto: ResolveMessageDto!): ChatMessage!
   likeConversationMessage(likeMessageDto: LikeMessageDto!): ChatMessage!
@@ -229,6 +231,12 @@ input PollOptionDto {
 input DeleteMessageDto {
   conversationId: ObjectId!
   messageId: ObjectId!
+}
+
+input UpdateMessageDto {
+  conversationId: ObjectId!
+  messageId: ObjectId!
+  tags: [String!] = []
 }
 
 input ResolveMessageDto {
